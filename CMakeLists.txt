@@ -1,67 +1,58 @@
-﻿cmake_minimum_required(VERSION 3.20)
-
+﻿
+cmake_minimum_required(VERSION 3.20)
 project(NewtonianDynamics)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
-file(GLOB_RECURSE SOURCES "${PROJECT_SOURCE_DIR}/src/*.cpp" "${PROJECT_SOURCE_DIR}/src/*.h")
+# Collect your sources
+file(GLOB_RECURSE SOURCES
+    "${PROJECT_SOURCE_DIR}/src/*.cpp"
+    "${PROJECT_SOURCE_DIR}/src/*.h"
+)
 
-
+# Create the executable
 add_executable(NewtonianDynamics ${SOURCES})
 
+# (Optional) Build shared libraries if needed
 set(BUILD_SHARED_LIBS ON CACHE BOOL "Build shared libraries" FORCE)
 
-# Fetch SDL2
-include(FetchContent)
+# ------------------------------------------------------------------------
+#  FIND SDL2, SDL2_image, and SDL2_mixer installed via Homebrew
+# ------------------------------------------------------------------------
+# Modern SDL2 CMake packages (on macOS Homebrew) usually provide targets:
+#   SDL2::SDL2
+#   SDL2::SDL2main
+#   SDL2_image::SDL2_image
+#   SDL2_mixer::SDL2_mixer
+# If this doesn't work, you may need custom FindSDL2.cmake or do a manual search.
 
-FetchContent_Declare(
-  SDL2
-  GIT_REPOSITORY https://github.com/libsdl-org/SDL.git
-  GIT_TAG release-2.28.4
+find_package(SDL2 REQUIRED)
+find_package(SDL2_image REQUIRED)
+find_package(SDL2_mixer REQUIRED)
+
+# Link your target against these libraries
+target_link_libraries(NewtonianDynamics
+    PUBLIC
+        SDL2::SDL2
+        SDL2::SDL2main
+        SDL2_image::SDL2_image
+        SDL2_mixer::SDL2_mixer
 )
 
-FetchContent_MakeAvailable(SDL2)
-
-set(SDL2IMAGE_INSTALL OFF CACHE BOOL "" FORCE)  # Keep installation disabled
-FetchContent_Declare(
-  SDL2_image
-  GIT_REPOSITORY https://github.com/libsdl-org/SDL_image.git
-  GIT_TAG release-2.6.3
-)
-
-FetchContent_MakeAvailable(SDL2_image)
-
-
-set(SDL2MIXER_INSTALL OFF CACHE BOOL "" FORCE)
-FetchContent_Declare(
-  SDL2_mixer
-  GIT_REPOSITORY https://github.com/libsdl-org/SDL_mixer.git
-  GIT_TAG release-2.8.0
-)
-FetchContent_MakeAvailable(SDL2_mixer)
-
-
-target_link_libraries(NewtonianDynamics PUBLIC SDL2::SDL2 SDL2::SDL2main SDL2_image::SDL2_image SDL2_mixer::SDL2_mixer)
-
-# Copy resources to the output directory
+# ------------------------------------------------------------------------
+#  Copy resource files to the output directory after build
+# ------------------------------------------------------------------------
 add_custom_command(TARGET NewtonianDynamics POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory
-        "${PROJECT_SOURCE_DIR}/sprites" "$<TARGET_FILE_DIR:NewtonianDynamics>/sprites"
+        "${PROJECT_SOURCE_DIR}/sprites"
+        "$<TARGET_FILE_DIR:NewtonianDynamics>/sprites"
 )
+
 add_custom_command(TARGET NewtonianDynamics POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory
-        "${PROJECT_SOURCE_DIR}/sound" "$<TARGET_FILE_DIR:NewtonianDynamics>/sound"
+        "${PROJECT_SOURCE_DIR}/sound"
+        "$<TARGET_FILE_DIR:NewtonianDynamics>/sound"
 )
 
-# Copy SDL2_image DLL to the output directory
-add_custom_command(TARGET NewtonianDynamics POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy
-        $<TARGET_FILE:SDL2_image> $<TARGET_FILE_DIR:NewtonianDynamics>
-)
 
-# Copy SDL2_mixer DLL to the output directory
-add_custom_command(TARGET NewtonianDynamics POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy
-        $<TARGET_FILE:SDL2_mixer> $<TARGET_FILE_DIR:NewtonianDynamics>
-)

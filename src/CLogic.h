@@ -2,8 +2,7 @@
 #include "Utilities.h"
 #include<SDL.h>
 #include "CEntity.h"
-#include "CBasePlayer.h"
-#include "CRenderer.h"
+#include <cstdint>
 #include <stdint.h>
 
 
@@ -14,24 +13,24 @@ enum ParticleTypes {
 	WATER,
 };
 
+enum Directions{
+    NONE,
+    RIGHT,
+    LEFT,
+};
 struct Particle {
 	uint8_t type;
 	SDL_Texture* texture;
 	Vector2 velocity;
 	Vector2 position;
-
+    int8_t direction = 0;
 };
 
 
 
 
 
-
-
-
-
-
- class CLogic {
+class CLogic {
 private:
 	SDL_Renderer* m_pRenderer;
 		
@@ -41,12 +40,12 @@ private:
 	// Set local window widths and heights
 	int m_nWindowWidth;
 	int m_nWindowHeight;
-	uint8_t tile_size = 8;
-	int grid_height = 800;
-	int grid_width = 1280;
+	uint8_t tile_size = 64; // Tile size needed to evenly fill the 8x8 grid.
+	int grid_height;
+	int grid_width;
 	CTextureHandler m_handler;
 	std::vector<std::vector<Particle>> grid; // Our grid
-	
+	std::vector<std::vector<Particle>> piece_table;	
 
 
 public:
@@ -72,31 +71,17 @@ public:
 		grid[x][y + 1] = tmp;
 	}
 	void Swap(Particle& p1, Particle& p2) {
+        if (p1.type == EMPTY && p2.type == EMPTY){
+            return;
+        }
 		std::swap(p1, p2);
 	}
 	
-	void HandleSand(const uint8_t& x, const uint8_t& y) {
-		Particle& p = grid[x][y];
-
-		// Convert velocity to discrete steps (could be velocity * dt, truncated to int)
-		int moveX = static_cast<int>(p.velocity.x);
-		int moveY = static_cast<int>(p.velocity.y);
+	void InitPieces();
+	void HandleSand(const uint8_t& x, const uint8_t& y, float dt) {
 		
-		p.position += p.velocity;
 
-		// If there's a desire to move downward (moveY > 0), check the cell below:
-		if (moveY > 0 && y + 1 < grid[x].size()-1 && grid[x][y + 1].type == EMPTY) {
-			int xpos = p.position.x;
-			int ypos = p.position.y;
-			Swap(grid[x][y], grid[x][y + 1]);
-			LOG("Moved down");
-		}
-		// If there's a desire to move sideways (moveX != 0), try to move left or right
-		else if (moveX > 0 && x + 1 < grid_width && grid[x + 1][y].type == EMPTY) {
-			Swap(grid[x][y], grid[x + 1][y]);
-		}
-
-		/*
+		
 		if (y == grid[x].size() - 1) {
 			// We're at the bottom;
 			// since we're sand dont really do anything
@@ -114,12 +99,13 @@ public:
 				}
 			}
 			else if (x == grid.size() - 1) {
+                LOG("This is true");
 				// very right
 				if (grid[x - 1][y + 1].type == EMPTY) {
 					Swap(grid[x][y], grid[x - 1][y + 1]);
 				}
 			}
-			else if (grid[x + 1][y + 1].type == ParticleTypes::EMPTY && grid[x - 1][y + 1].type == ParticleTypes::EMPTY) {
+			else if (grid[x + 1][y + 1].type == ParticleTypes::EMPTY && grid[x - 1][y + 1].type == ParticleTypes::EMPTY){
 				int random = GetRandomNumber(0, 1);
 				if (random == 0) {
 					Swap(grid[x][y], grid[x + 1][y + 1]);
@@ -138,87 +124,79 @@ public:
 				}
 			}
 		}
-		*/
+		
 	}
 
 
-	void ApplyPhysics(float dt) {
-		for (int x = 0; x < grid.size(); ++x) {
-			for (int y = 0; y < grid[x].size(); ++y) {
-				// Apply physics to all objects
 
-			}
-		}
-	}
 
-	void HandleWater(uint8_t x, uint8_t y) {
-		// If we are at the bottom row, there's nowhere to go
-		if (y == grid[x].size() - 1) {
-			// Bottom boundary. No downward movement possible.
-			return;
-		}
+void HandleWater(uint8_t x, uint8_t y) {
+    // ---------------------------------------
+    // 1) Vertical / diagonal movement first
+    // ---------------------------------------
+    if (y == grid[x].size() - 1) {
+        // Bottom edge
+        return;
+    }
+    else {
+        // Try down
+        if (grid[x][y + 1].type == EMPTY) {
+            Swap(grid[x][y], grid[x][y + 1]);
+            return; // Moved down, done
+        }
+        // Try diagonal down-right
+        else if (x < grid.size() - 1 && grid[x + 1][y + 1].type == EMPTY) {
+            Swap(grid[x][y], grid[x + 1][y + 1]);
+            return; // Moved diagonally, done
+        }
+        // Try diagonal down-left
+        else if (x > 0 && grid[x - 1][y + 1].type == EMPTY) {
+            Swap(grid[x][y], grid[x - 1][y + 1]);
+            return; // Moved diagonally, done
+        }
+    }
 
-		// Check other boundaries for columns
-		if (x == grid.size() - 1) {
-			// Right edge boundary:
-			// 1) Check if we can go down
-			if (grid[x][y + 1].type == EMPTY) {
-				Swap(grid[x][y], grid[x][y + 1]);
-			}
-			// 2) Since x == grid.size() - 1, we cannot go bottom-right
-			//    But we can still check bottom-left if x - 1 is valid
-			else if (x > 0 && grid[x - 1][y + 1].type == EMPTY) {
-				Swap(grid[x][y], grid[x - 1][y + 1]);
-			}
-			// 3) Check sideways left if possible
-			else if (x > 0 && grid[x - 1][y].type == EMPTY) {
-				Swap(grid[x][y], grid[x - 1][y]);
-			}
-			// If none of these conditions are met, do nothing
-		}
-		else if (x == 0) {
-			// Left edge boundary:
-			// 1) Check if we can go straight down
-			if (grid[x][y + 1].type == EMPTY) {
-				Swap(grid[x][y], grid[x][y + 1]);
-			}
-			// 2) Since x == 0, we cannot go bottom-left
-			//    But we can still check bottom-right if x + 1 is valid
-			else if (x + 1 < grid.size() && grid[x + 1][y + 1].type == EMPTY) {
-				Swap(grid[x][y], grid[x + 1][y + 1]);
-			}
-			// 3) Check sideways right
-			else if (x + 1 < grid.size() && grid[x + 1][y].type == EMPTY) {
-				Swap(grid[x][y], grid[x + 1][y]);
-			}
-			// If none of these conditions are met, do nothing
-		}
-		else {
-			// This is the normal case (not on the leftmost or rightmost edge):
-			// 1) Check if we can go straight down
-			if (grid[x][y + 1].type == EMPTY) {
-				Swap(grid[x][y], grid[x][y + 1]);
-			}
-			// 2) Bottom-right
-			else if (x + 1 < grid.size() && grid[x + 1][y + 1].type == EMPTY) {
-				Swap(grid[x][y], grid[x + 1][y + 1]);
-			}
-			// 3) Bottom-left
-			else if (x > 0 && grid[x - 1][y + 1].type == EMPTY) {
-				Swap(grid[x][y], grid[x - 1][y + 1]);
-			}
-			// 4) Right
-			else if (x + 1 < grid.size() && grid[x + 1][y].type == EMPTY) {
-				Swap(grid[x][y], grid[x + 1][y]);
-			}
-			// 5) Left
-			else if (x > 0 && grid[x - 1][y].type == EMPTY) {
-				Swap(grid[x][y], grid[x - 1][y]);
-			}
-			// If none apply, water stays put
-		}
-	}
+    // If no direction set yet, pick one
+    if (grid[x][y].direction == Directions::NONE) {
+        // You can pick randomly, or always default to RIGHT, etc.
+        // Example: 50% chance left or right
+        int random = GetRandomNumber(0, 1);  
+        if (random == 0)
+            grid[x][y].direction = Directions::LEFT;
+        else
+            grid[x][y].direction = Directions::RIGHT;
+    }
 
+    // If direction is RIGHT
+    if (grid[x][y].direction == Directions::RIGHT) {
+        // Check if we can move right
+        if (x < grid.size() - 1 && grid[x + 1][y].type == EMPTY) {
+            Swap(grid[x][y], grid[x + 1][y]);
+        } else {
+            // Can't move right, switch to LEFT
+            grid[x][y].direction = Directions::LEFT;
+            // Optionally, you can immediately try to move left
+            // if (x > 0 && grid[x - 1][y].type == EMPTY) {
+            //     Swap(grid[x][y], grid[x - 1][y]);
+            // }
+        }
+    }
+
+    // If direction is LEFT
+    else if (grid[x][y].direction == Directions::LEFT) {
+        // Check if we can move left
+        if (x > 0 && grid[x - 1][y].type == EMPTY) {
+            Swap(grid[x][y], grid[x - 1][y]);
+        } else {
+            // Can't move left, switch to RIGHT
+            grid[x][y].direction = Directions::RIGHT;
+            // Optionally, immediately try to move right
+            // if (x < grid.size() - 1 && grid[x + 1][y].type == EMPTY) {
+            //     Swap(grid[x][y], grid[x + 1][y]);
+            // }
+        }
+    }
+}
 	void UpdateParticles(float &dt) {
 		// Iterate backwards and apply downward physics gravity
 		/*
@@ -232,17 +210,22 @@ public:
 			}
 		}
 		*/
-		for (int x = 0; x < grid.size(); ++x) {
-			for (int y = 0; y < grid[x].size(); ++y) {
-				
-
-				if (grid[x][y].type == SAND && y != grid[x].size()) {
-					
-					grid[x][y].velocity.y += 9.81 * dt;
-					HandleSand(x, y);
+		/* uncomment this, also segfaults here somewhere deal with it
+		for (int x = grid.size(); x > 0; --x) {
+			for (int y = grid[x].size(); y > 0; --y) {
+                if (grid[x][y].type == EMPTY){
+                    continue;
+                }
+				if (grid[x][y].type == SAND && y != grid[x].size()) {	
+	//				HandleSand(x, y, dt);
 				}
+
+				if (grid[x][y].type == WATER && y != grid[x].size()) {
+     //               HandleWater(x, y);
+                }
 			}
 		}
+		*/
 	}
 	void Init(SDL_Renderer* renderer, int WindowWidth, int WindowHeight);
 	void AdjustResolution(int x, int y);

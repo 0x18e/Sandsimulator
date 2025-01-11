@@ -1,0 +1,3 @@
+/Users/0x18e/personal/programming/SDL_Projects/chess/build/CMakeFiles/NewtonianDynamics.dir
+/Users/0x18e/personal/programming/SDL_Projects/chess/build/CMakeFiles/edit_cache.dir
+/Users/0x18e/personal/programming/SDL_Projects/chess/build/CMakeFiles/rebuild_cache.dir

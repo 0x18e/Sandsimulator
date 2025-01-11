@@ -30,8 +30,8 @@ private:
 	float m_fDeltaTime;
 
 
-	int m_nWindowWidth = 1280;
-	int m_nWindowHeight = 800;
+	int m_nWindowWidth = 512;
+	int m_nWindowHeight = 512;
 
 public:
 	CEngine();

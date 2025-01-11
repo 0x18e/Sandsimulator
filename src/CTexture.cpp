@@ -37,7 +37,10 @@ bool CTextureHandler::LoadAllTextures() {
 
 #if defined (__APPLE__)
 	LOG("Using Apple's filesystem method, also write this cause i didnt yet");
-
+  	bool b = this->LoadTexture("sprites/sand.png", "sand");
+    b = this->LoadTexture("sprites/water.png", "water");
+	bool c = this->LoadTexture("sprites/white_pawn.png", "white_pawn");
+    return b && c;
 #endif // 
 	
 	return false;
@@ -81,7 +84,6 @@ void CTextureHandler::SetCurrentTexture(std::string id) {
 
 SDL_Texture* CTextureHandler::GetTexture(const std::string& id) {
 	if (this->m_Textures[id] == nullptr) {
-		LOG("No texture found");
 		return nullptr;
 	}
 	return this->m_Textures[id];

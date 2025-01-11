@@ -6,33 +6,55 @@ CLogic::CLogic() : m_pRenderer(nullptr), m_nWindowHeight(0), m_nWindowWidth(0){
 
 // Use this for any startup required things
 void CLogic::Init(SDL_Renderer* renderer, int WindowWidth, int WindowHeight) {
+	LOG("THIS IS JSUT CHECKING IF THIS WORKS");
 	m_nWindowWidth = WindowWidth;
 	m_nWindowHeight = WindowHeight;
 	m_handler.LoadAllTextures();
-	
+    LOG("Logics window width " << m_nWindowWidth << " and window height " << m_nWindowHeight);
 	grid_width = m_nWindowWidth / tile_size;
 	grid_height = m_nWindowHeight / tile_size;
+	grid_width = 8;
+	grid_height = 8;
+    LOG("Grid width " << grid_width << " Grid height " << grid_height);
 	// Make the grid
+	bool flip = false;
 	for (int x = 0; x < grid_width; ++x) {
 		std::vector<Particle> row;
 		for (int y = 0; y < grid_height; ++y) {
 			Particle n;
-			if (y != grid_height - 1) {
-				n.texture = m_handler.GetTexture("blue");
-				n.type = EMPTY;
+			if (flip == false){
+				if (y % 2 == 0) {
+					n.texture = m_handler.GetTexture("water");
+				}
+				else {
+					n.texture = m_handler.GetTexture("sand");
+				}
+			}else{
+				if (y % 2 == 0){
+					n.texture = m_handler.GetTexture("sand");
+				}
+				else {
+					n.texture = m_handler.GetTexture("water");
+				}
+				// spawn pieces
+				// write function for specific pieces, probably hard code this
 			}
-			else {
-				n.texture = m_handler.GetTexture("sand");
-				n.type = ParticleTypes::SAND;
-			}
-			
 			row.push_back(n);
 			//grid[x][y] = n; // ok this makes sense
 		
 		}
+		flip = !flip;
 		grid.push_back(row);
 	}
 }
+
+
+
+void CLogic::InitPieces(){
+
+}
+
+
 
 void CLogic::AdjustResolution(int x, int y) {
 
@@ -47,13 +69,7 @@ void CLogic::AdjustResolution(int x, int y) {
 
 
 void CLogic::Update(float dt) {
-	this->UpdateParticles(dt);
-	if (is_clicking) {
-		int x, y;
-		SDL_GetMouseState(&x, &y);
-		SpawnSand(x / tile_size, y / tile_size);
-	}
-	
+		
 }
 
 // Draw calls
@@ -68,6 +84,9 @@ void CLogic::Render(){
 	// Draw grid here
 	for (int x = 0; x < grid.size(); x++) {
 		for (int y = 0; y < grid[x].size(); ++y) {
+            if (grid[x][y].type == EMPTY){
+                continue;
+            }
 			if (grid[x][y].texture) {
 				SDL_Rect rec;
 				rec.x = x * tile_size;
@@ -90,7 +109,7 @@ void CLogic::InputHandler(const SDL_Event& key) {
 	switch (key.type) {
 	case SDL_MOUSEBUTTONDOWN:
 		
-		is_clicking = true;
+		
 		
 		//LOG(x / tile_size << " " << y / tile_size);
 		break;
